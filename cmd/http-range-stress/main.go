@@ -1,4 +1,4 @@
-// usage: http-range-stress [URL] [Range HTTP request header value] [no. of workers] [duration]
+// usage: http-range-stress URL Range_HTTP_request_header_value no._of_workers duration
 package main
 
 import (
@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 4 {
+	if len(os.Args) < 5 {
 		log.Fatalln("not enough args")
 	}
 

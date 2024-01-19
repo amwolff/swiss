@@ -1,4 +1,4 @@
-// usage: s3-create-objects [endpoint] [AKID] [SAK] [bucket] [prefix (can be empty)] [number of objects to create]
+// usage: s3-create-objects endpoint AKID SAK bucket prefix number_of_objects_to_create
 package main
 
 import (
