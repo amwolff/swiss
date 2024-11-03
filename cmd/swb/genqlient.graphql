@@ -1,0 +1,31 @@
+query availableMachines($input: PaginatedInstantDeliveryServersInput) {
+  instantDeliveryServers(input: $input) {
+    entriesTotalCount
+    pageCount
+    currentPageIndex
+    pageSize
+    nextPageIndex
+    previousPageIndex
+    isLastPage
+    isFirstPage
+    entries {
+      name
+      location {
+        name
+        region
+        short
+      }
+      uplinkCapacity
+      hardware {
+        cpus {
+          name
+          count
+        }
+        rams {
+          count
+          size
+        }
+      }
+    }
+  }
+}

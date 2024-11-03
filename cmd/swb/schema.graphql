@@ -1,0 +1,1407 @@
+type Query {
+  """
+  This query provides basic information about your account such as `name`, `email`, `hostname` template and when the account was created.
+  """
+  account: Account!
+
+  """
+  Provides information about single in-stock server identified by it's name.
+  """
+  instantDeliveryServer(input: InstantDeliveryServerInput!): InstantDeliveryServer!
+
+  """
+  List of all in-stock servers available for instant delivery.<br>You can look up servers by location, region, or hardware configuration.
+  """
+  instantDeliveryServers(input: PaginatedInstantDeliveryServersInput): PaginatedInstantDeliveryServerResponse!
+
+  """
+  Invoice query provides information about a single invoice in your account. Use `InvoiceInput` to specify invoice number.
+  """
+  invoice(input: InvoiceInput!): Invoice!
+
+  """Invoices query provides information about invoices in your account."""
+  invoices(input: PaginatedInvoicesInput): PaginatedInvoiceResponse!
+
+  """Get a reverse DNS (PTR) record for a given IP"""
+  reverseDnsRecord(input: ReverseDnsRecordInput!): ReverseDnsRecordResponse!
+
+  """
+  Server query provides information about a single server in your account. You can query name and location of the server, its power status, IPMI IP, its network settings and more. Use `ServerInput` to specify server's name, alias, IP or IPMI IP.
+  """
+  server(input: ServerInput!): Server!
+
+  """
+  Servers query provides a list of servers in your account.<br>You can filter by name, location, power status, IPMI IP, IP, alias, etc. <br>You can also sort results by various attributes.
+  """
+  servers(input: PaginatedServersInput): PaginatedServerResponse!
+
+  """
+  Subscription query provides basic information about your subscription, including `subtotal`, `currency`, `type`, `createdAt`, subscription items, and billing cycle.
+  """
+  subscription(input: SubscriptionInput!): Subscription!
+
+  """
+  Subscriptions query provides information about subscriptions in your account.
+  """
+  subscriptions(input: PaginatedSubscriptionsInput): PaginatedSubscriptionResponse!
+
+  """Get information about a single support request."""
+  supportRequest(input: SupportRequestInput!): SupportRequest!
+
+  """Get a list of support requests."""
+  supportRequests(input: PaginatedSupportRequestsInput): [SupportRequest!]!
+
+  """
+  Get traffic statistics for a given time period. The statistics are aggregated for all servers in the given time period if no server is specified. If one or more server is specified, the statistics are aggregated for the given servers.
+  """
+  traffic(input: TrafficInput!): Traffic!
+  error: ErrorCode!
+}
+
+type Account {
+  name: String
+  email: String!
+  hostname: String
+  createdAt: DateTime!
+}
+
+"""
+The javascript `Date` as string. Type represents date and time as the ISO Date string.
+"""
+scalar DateTime
+
+type InstantDeliveryServer {
+  """The unique identifier of the server."""
+  name: String!
+
+  """The location of the server."""
+  location: Location!
+
+  """Overall server uplink capacity in Gbps."""
+  uplinkCapacity: Int!
+
+  """Current hardware configuration of the server."""
+  hardware: Hardware!
+}
+
+type Location {
+  """Location name."""
+  name: String!
+
+  """Location region."""
+  region: String!
+
+  """Location short name."""
+  short: String!
+}
+
+type Hardware {
+  cpus: [Cpu!]!
+  hdds: [Hdd!]!
+  rams: [Ram!]!
+}
+
+type Cpu {
+  count: Int!
+  name: String!
+}
+
+type Hdd {
+  """Number of storage units."""
+  count: Int!
+  storage: Storage!
+}
+
+type Storage {
+  """Storage capacity in gigabytes (GB)."""
+  size: Int!
+  type: StorageType!
+}
+
+"""Type of the storage device."""
+enum StorageType {
+  """
+  A SSD (Solid State Drive) is a type of storage that uses non-volatile memory to store data. SSDs are faster and more reliable than traditional HDDs, but they are also more expensive.
+  """
+  SSD
+
+  """
+  An HDD (Hard Disk Drive) is a traditional type of storage that uses spinning disks to store data. HDDs are slower and less reliable than SSDs, but they are also less expensive.
+  """
+  HDD
+
+  """
+  An NVMe (Non-Volatile Memory Express) is a type of SSD that uses the PCIe interface to connect to the motherboard, rather than the SATA interface used by most SSDs. This allows for faster data transfer speeds.
+  """
+  NVME
+
+  """
+  A SATADOM (SATA Disk on Module) is a type of SSD that uses the same interface as a traditional HDD, but is much smaller and more durable. It is commonly used in servers that have limited space for storage devices.
+  """
+  SATADOM
+
+  """
+  An eMMC (Embedded MultiMediaCard) is a type of SSD that is integrated into a device. They are smaller and less expensive than other types of SSDs, but are also slower and have less storage capacity.
+  """
+  EMMC
+}
+
+type Ram {
+  count: Int!
+
+  """RAM size in gigabytes (GB)."""
+  size: Int!
+}
+
+input InstantDeliveryServerInput {
+  name: String!
+}
+
+type PaginatedInstantDeliveryServerResponse {
+  """Total number of items in the full result set."""
+  entriesTotalCount: Int!
+
+  """Total number of pages which constitute the full result set."""
+  pageCount: Int!
+
+  """Current page index which was returned, the first index is 0."""
+  currentPageIndex: Int!
+
+  """Number of items per page."""
+  pageSize: Int!
+
+  """Index of the next page, when none is available `null`."""
+  nextPageIndex: Int
+
+  """
+  Index of the previous page, first index is 0, if currently on first page, the value will be `null`.
+  """
+  previousPageIndex: Int
+
+  """Indicates whether this is the last page."""
+  isLastPage: Boolean!
+
+  """Indicates whether this is the first page."""
+  isFirstPage: Boolean!
+
+  """Resulting paginated items."""
+  entries: [InstantDeliveryServer!]!
+}
+
+input PaginatedInstantDeliveryServersInput {
+  """First page has pageIndex value `0`."""
+  pageIndex: Int = 0
+
+  """The maximum number of results per page is `50`."""
+  pageSize: Int! = 50
+  filter: InstantDeliveryServersInput
+}
+
+input InstantDeliveryServersInput {
+  name_in: [String!]
+  location_in: [String!]
+  region_in: [String!]
+}
+
+type Invoice {
+  """The unique invoice number."""
+  invoiceNumber: String!
+
+  """The associated subscription related to the invoice."""
+  subscription: Subscription
+
+  """The billing period covered by the invoice."""
+  period: Period!
+
+  """The payment details associated with the invoice."""
+  payment: Payment
+
+  """The items included in the invoice."""
+  invoiceItems: [InvoiceItem!]!
+
+  """The total amount of the invoice, excluding any applicable taxes."""
+  subtotal: Float!
+
+  """The total amount of the invoice, including VAT (Value Added Tax)."""
+  total: Float!
+
+  """The total VAT (Value Added Tax) amount of the invoice."""
+  totalVat: Float!
+
+  """The currency of the invoice."""
+  currency: Currency!
+
+  """The date when the invoice was created."""
+  createdAt: DateTime!
+
+  """The due date for the invoice payment."""
+  dueDate: DateTime!
+
+  """The type of the invoice."""
+  invoiceType: InvoiceType
+}
+
+type Subscription {
+  """Unique identifier of the subscription."""
+  name: String!
+
+  """The type of subscription. Currently supported: `PREPAID` and `TRIAL`."""
+  type: SubscriptionType!
+
+  """
+  The total cost of the subscription items, excluding any applicable taxes.
+  """
+  subtotal: Float!
+
+  """The currency in which the subscription is priced."""
+  currency: Currency!
+
+  """
+  Information about subscription billing cycle. Only available for the subscription of the type `PREPAID`.
+  """
+  billingCycle: BillingCycle
+
+  """The date when the subscription was created."""
+  createdAt: DateTime!
+
+  """
+  The individual items included in the subscription. Only contains recurring items.
+  """
+  subscriptionItems: [SubscriptionItem!]!
+
+  """Invoices associated with the subscription."""
+  invoices: [Invoice!]!
+}
+
+"""Supported subscription types."""
+enum SubscriptionType {
+  """Prepaid subscription."""
+  PREPAID
+
+  """Trial subscription."""
+  TRIAL
+}
+
+"""Supported currencies."""
+enum Currency {
+  """United States dollar."""
+  USD
+
+  """Pound sterling."""
+  GBP
+
+  """Euro."""
+  EUR
+}
+
+"""
+Information about subscription billing cycle. Only available for the subscription of the type PREPAID.
+"""
+type BillingCycle {
+  """
+  Currently there are two possible billing interval units: `MONTH` or `YEAR`.
+  """
+  unit: BillingIntervalUnit!
+
+  """The quantity of billed interval units."""
+  quantity: Int!
+
+  """
+  Specifies the numerical day of the month on which the billing cycle starts for the monthly cycle, or the numerical month of the year in which the billing cycle starts for the yearly cycle.
+  """
+  start: Int!
+}
+
+"""
+Specifies the billing interval unit for subscriptions. Currently supported intervals: `MONTH`, `YEAR`.
+"""
+enum BillingIntervalUnit {
+  """The billing interval unit for a monthly subscription."""
+  MONTH
+
+  """The billing interval unit for a yearly subscription."""
+  YEAR
+}
+
+type SubscriptionItem {
+  """A brief description of the subscription item."""
+  description: String
+
+  """The price of the subscription item excluding any applicable taxes."""
+  price: Float!
+
+  """The currency in which the subscription item is priced."""
+  currency: Currency!
+
+  """The type of the subscription item."""
+  type: SubscriptionItemType!
+
+  """Additional details about the subscription item."""
+  subscriptionItemDetail: SubscriptionItemDetail!
+}
+
+"""Types of items available for subscription."""
+enum SubscriptionItemType {
+  """Regular recurring fee charged for server."""
+  SERVER
+
+  """One time or recurring fee charged for IP address."""
+  IP
+
+  """Additional fee which is not covered by other types."""
+  FEE
+
+  """DDOS protection fee charge."""
+  DDOS
+
+  """Reccuring price charged for outgoing traffic usage."""
+  TRAFFIC
+
+  """Any other subscription item (not charge) not covered by other types."""
+  OTHER
+}
+
+"""Additional details about the subscription item."""
+type SubscriptionItemDetail {
+  """The associated server, if applicable."""
+  server: Server
+
+  """The associated traffic plan, if applicable."""
+  trafficPlan: TrafficPlan
+}
+
+type Server {
+  """
+  Server name is used to uniquely identify each server. Format: `DP-12345`
+  """
+  name: String!
+
+  """
+  Custom alias for your server. Can be set via [setServerAlias]({{Mutations.setServerAlias}}) or in the client panel.
+  """
+  alias: String
+  hostname: String
+  location: Location!
+
+  """How long your system has been running in days."""
+  uptime: Int!
+  powerStatus: PowerStatus!
+  status: ServerStatus!
+  network: Network!
+  hardware: Hardware!
+  system: System!
+  trafficPlan: TrafficPlan!
+  tags: [ServerTag!]!
+
+  """
+  Contains information related to the server subscription, including the price of the server.
+  """
+  billing: Billing!
+}
+
+"""Power status of the device."""
+enum PowerStatus {
+  ON
+  UNKNOWN
+  OFF
+}
+
+"""Information about the server's production status."""
+enum ServerStatus {
+  """
+  Server is being prepared for production. It may include hardware configuration, OS installation, and other tasks.
+  """
+  PROVISIONING
+
+  """Server is being installed with the OS."""
+  INSTALLING
+
+  """
+  Server is configured and available for use. Access details were delivered to the customer.
+  """
+  IN_PRODUCTION
+
+  """
+  There is a maintenance task in progress such as OS reinstall, hardware replacement or reconfiguration.
+  """
+  IN_MAINTENANCE
+
+  """
+  Server is disconnected from the network. This is usually due to unpaid invoices.
+  """
+  DISCONNECTED
+}
+
+type Network {
+  """List of IP addresses assigned to the server."""
+  ipAddresses: [IpAddress!]!
+
+  """DDoS Shield protection setting."""
+  ddosShieldLevel: DdosShieldLevel!
+
+  """IPMI (Intelligent Platform Management Interface) information."""
+  ipmi: Ipmi!
+
+  """Whether the BGP session is estabilished for the server."""
+  hasBgp: Boolean
+
+  """Overall server uplink capacity in Gbps."""
+  uplinkCapacity: Int!
+}
+
+type IpAddress {
+  """True if this IP address is the primary address for the server."""
+  isPrimary: Boolean!
+
+  """
+  Whether or not the IP address is a BGP prefix. BGP prefixes are used to route traffic between different networks.
+  """
+  isBgpPrefix: Boolean!
+
+  """The type of IP address."""
+  type: IpAddressType!
+
+  """
+  The netmask of the IP address. The netmask is used to determine which part of the IP address is the network address and which part is the host address.
+  """
+  netMask: String
+
+  """The default gateway for the IP address."""
+  gateway: String
+
+  """The network address of the IP address."""
+  network: String
+
+  """The broadcast address of the IP address."""
+  broadcast: String
+
+  """The IP address itself."""
+  ip: String!
+
+  """
+  The CIDR notation of the IP address. CIDR notation is a more compact way of representing IP addresses and netmasks.
+  """
+  cidr: String!
+}
+
+"""
+Currently there are two versions of IP addresses in use on the Internet: IPv4 and IPv6.
+"""
+enum IpAddressType {
+  """IPv4 address type."""
+  IPV4
+
+  """IPv6 address type."""
+  IPV6
+}
+
+"""Level of protection available for the DDoS Shield."""
+enum DdosShieldLevel {
+  """
+  Deployed automatically on our edge routers and detects and filters out DDoS attacks through firewall rules. Efficient against NTP, DNS, Memcached, and other simple amplification attacks.
+  """
+  VOLUMETRIC
+
+  """
+  Deployed on dedicated anti-DDoS hardware in each data center. It intercepts L4 protocol-based attacks such as TCP SYN floods and filters malicious packets using custom mitigation techniques.
+  """
+  FULL
+
+  """No DDoS protection."""
+  OFF
+}
+
+type Ipmi {
+  """IPMI IP address."""
+  ip: String
+
+  """IPMI username."""
+  username: String
+}
+
+type System {
+  raid: Raid!
+  os: Os!
+}
+
+"""
+RAID stands for redundant array of independent disks. It is a way of storing the same data on multiple hard drives to improve performance and increase data availability.
+"""
+enum Raid {
+  OTHER
+  NONE
+  CUSTOM
+
+  """
+  This type of RAID uses striping, which means that data is split across multiple disks and written in parallel. This can improve performance because multiple disks can be accessed at the same time. However, RAID 0 provides no data redundancy, so if one of the disks fails, all data on the array is lost.
+  """
+  RAID_0
+
+  """
+  This type of RAID is also known as mirroring. It involves writing the same data to multiple disks, so that if one disk fails, the data can still be accessed from the other disk. This provides improved data availability, but does not improve performance.
+  """
+  RAID_1
+
+  """
+  This type of RAID uses striping and parity, which is a method of error checking. Data is striped across multiple disks, and a parity block is also written to each disk. This allows the array to continue functioning even if one of the disks fails, because the missing data can be reconstructed using the parity information. However, writing data to a RAID 5 array can be slower than writing to a single disk.
+  """
+  RAID_5
+
+  """
+  This is similar to RAID 5, but it uses double parity, which provides even greater data protection. It can continue functioning even if two disks fail at the same time. However, this comes at the cost of reduced performance.
+  """
+  RAID_6
+
+  """
+  This is a combination of RAID 1 and RAID 0. It involves mirroring data across multiple disks, and then striping the mirrored data across even more disks. This provides both improved performance and data availability. However, it requires at least four disks.
+  """
+  RAID_10
+}
+
+type Os {
+  """Name of the operating system."""
+  name: String!
+}
+
+type TrafficPlan {
+  name: String
+}
+
+type ServerTag {
+  key: String!
+  value: String!
+}
+
+type Billing {
+  subscriptionItem: SubscriptionItem!
+}
+
+"""Object representing a period of time."""
+type Period {
+  """The starting date of the period."""
+  from: DateTime!
+
+  """The ending date of the period."""
+  to: DateTime!
+}
+
+"""
+Information about subscription billing cycle. Only available for the subscription of the type Prepaid.
+"""
+type Payment {
+  """Status of the payment."""
+  status: PaymentStatus!
+
+  """
+  The day on which the payment was made, following the ISO 8601 standard. Null if the payment is not yet made.
+  """
+  paidOn: DateTime
+
+  """
+  Provides information about the payment method associated with the payment. Null if the payment is not yet made.
+  """
+  method: PaymentMethod
+}
+
+"""description"""
+enum PaymentStatus {
+  """Payment has been made and received."""
+  PAID
+
+  """Payment has not been made or received."""
+  NOT_PAID
+
+  """Payment is past due date."""
+  PAST_DUE
+}
+
+"""The payment method."""
+enum PaymentMethod {
+  """Bank transfer."""
+  BANK_TRANSFER
+
+  """Card payment."""
+  CARD
+
+  """Payment with DP balance."""
+  DP_BALANCE
+
+  """PayPal payment."""
+  PAYPAL
+}
+
+type InvoiceItem {
+  """The description of the item on the invoice."""
+  description: String!
+
+  """Item quantity."""
+  quantity: Float!
+
+  """Item unit price."""
+  unitPrice: Float!
+
+  """
+  The total price for the item on the invoice, excluding any taxes or fees.
+  """
+  amount: Float!
+
+  """The VAT (Value Added Tax) percentage applied to the item."""
+  vatPercent: Float!
+
+  """The currency in which the invoice item is listed."""
+  currency: Currency!
+
+  """The type of the invoice item."""
+  type: InvoiceItemType
+}
+
+"""Types of items which can appear on invoice."""
+enum InvoiceItemType {
+  """Regular recurring fee charged for server."""
+  SERVER
+
+  """One time or recurring fee charged for IP address."""
+  IP
+
+  """Additional fee which is not covered by other types."""
+  FEE
+
+  """Discount applied to subscription."""
+  DISCOUNT
+
+  """DDOS protection fee charge."""
+  DDOS
+
+  """Charge for BGP service setup."""
+  BGP
+
+  """Credit added to subscription to be used in further charges."""
+  CREDIT
+
+  """Reccuring price charged for outgoing traffic usage."""
+  TRAFFIC
+
+  """Extra fee, if the traffic usage exceeds the used plan."""
+  TRAFFIC_OVERAGE
+
+  """Any other subscription item (not charge) not covered by other types."""
+  OTHER
+}
+
+"""Type of the invoice, the type can change based on further actions."""
+enum InvoiceType {
+  """
+  A preliminary payment request, typically issued for services to be rendered in the upcoming billing period. Draft invoices are not intended for tax reporting or compliance purposes.
+  """
+  DRAFT
+
+  """
+  An invoice provided to the customer after a service has been provided, used for tax reporting and compliance purposes. Draft invoices are typically converted to tax invoices upon receiving payment for the services rendered.
+  """
+  TAX
+}
+
+input InvoiceInput {
+  """Unique alpha numeric code identifying invoice."""
+  invoiceNumber: String!
+}
+
+type PaginatedInvoiceResponse {
+  """Total number of items in the full result set."""
+  entriesTotalCount: Int!
+
+  """Total number of pages which constitute the full result set."""
+  pageCount: Int!
+
+  """Current page index which was returned, the first index is 0."""
+  currentPageIndex: Int!
+
+  """Number of items per page."""
+  pageSize: Int!
+
+  """Index of the next page, when none is available `null`."""
+  nextPageIndex: Int
+
+  """
+  Index of the previous page, first index is 0, if currently on first page, the value will be `null`.
+  """
+  previousPageIndex: Int
+
+  """Indicates whether this is the last page."""
+  isLastPage: Boolean!
+
+  """Indicates whether this is the first page."""
+  isFirstPage: Boolean!
+
+  """Resulting paginated items."""
+  entries: [Invoice!]!
+}
+
+input PaginatedInvoicesInput {
+  """First page has pageIndex value `0`."""
+  pageIndex: Int = 0
+
+  """The maximum number of results per page is `50`."""
+  pageSize: Int! = 50
+  filter: InvoicesInput
+}
+
+input InvoicesInput {
+  """Array of invoice numbers for filtering."""
+  invoiceNumber_in: [String!]
+
+  """Array of supported currencies for filtering."""
+  currency_in: [Currency!]
+
+  """Array of payment statuses for filtering."""
+  paymentStatus_in: [PaymentStatus!]
+}
+
+type ReverseDnsRecordResponse {
+  """IP address of the reverse DNS (PTR) record"""
+  ip: IpAddress!
+
+  """
+  Hostname of the reverse DNS (PTR) record, or `null`, when there is no such record.
+  """
+  hostname: String
+}
+
+input ReverseDnsRecordInput {
+  """
+  IP address for the reverse DNS (PTR) record. Currently only IPv4 addresses are supported.
+  """
+  ip: String!
+}
+
+input ServerInput {
+  """Unique server identifier. Format: `DP-12345`."""
+  name: String
+
+  """
+  Make sure all server aliases are unique, otherwise you will get an error.
+  """
+  alias: String
+
+  """One of the IP adresses of the server"""
+  ip: String
+
+  """The IPMI IP address"""
+  ipmiIp: String
+
+  """The key-value tag pair which is unique for the server"""
+  tag: ServerTagInput
+}
+
+input ServerTagInput {
+  """
+  The key of the tag. Can only contain alphanumeric characters, hyphens, underscores and periods. Maximal length is 100 characters.
+  """
+  key: String!
+
+  """The value of the tag. Maximum length of 150 characters."""
+  value: String!
+}
+
+type PaginatedServerResponse {
+  """Total number of items in the full result set."""
+  entriesTotalCount: Int!
+
+  """Total number of pages which constitute the full result set."""
+  pageCount: Int!
+
+  """Current page index which was returned, the first index is 0."""
+  currentPageIndex: Int!
+
+  """Number of items per page."""
+  pageSize: Int!
+
+  """Index of the next page, when none is available `null`."""
+  nextPageIndex: Int
+
+  """
+  Index of the previous page, first index is 0, if currently on first page, the value will be `null`.
+  """
+  previousPageIndex: Int
+
+  """Indicates whether this is the last page."""
+  isLastPage: Boolean!
+
+  """Indicates whether this is the first page."""
+  isFirstPage: Boolean!
+
+  """Resulting paginated items."""
+  entries: [Server!]!
+}
+
+input PaginatedServersInput {
+  """First page has pageIndex value `0`."""
+  pageIndex: Int = 0
+
+  """The maximum number of results per page is `50`."""
+  pageSize: Int! = 50
+  filter: ServersInput
+}
+
+input ServersInput {
+  """The name of the server."""
+  name_in: [String!]
+
+  """The alias of the server."""
+  alias_in: [String!]
+
+  """The location of the server."""
+  location_in: [String!]
+
+  """The region of the server."""
+  region_in: [String!]
+
+  """The status of the server."""
+  serverStatus_in: [ServerStatus!]
+
+  """The power status of the server."""
+  powerStatus_in: [PowerStatus!]
+
+  """One of the IP adresses is assigned to the server."""
+  ip_in: [String!]
+
+  """
+  One of the IP adresses is assigned to the server, has to be adressed to IPMI interface.
+  """
+  ipmiIp_in: [String!]
+
+  """
+  Server has at least one of the tags included here (must match both key and value).
+  """
+  tags_in: [ServerTagInput!]
+
+  """
+  Server has all of the tags included here (must match both key and value).
+  """
+  tags_each: [ServerTagInput!]
+}
+
+input SubscriptionInput {
+  """Unique alpha numeric code identifying subscription."""
+  name: String!
+}
+
+type PaginatedSubscriptionResponse {
+  """Total number of items in the full result set."""
+  entriesTotalCount: Int!
+
+  """Total number of pages which constitute the full result set."""
+  pageCount: Int!
+
+  """Current page index which was returned, the first index is 0."""
+  currentPageIndex: Int!
+
+  """Number of items per page."""
+  pageSize: Int!
+
+  """Index of the next page, when none is available `null`."""
+  nextPageIndex: Int
+
+  """
+  Index of the previous page, first index is 0, if currently on first page, the value will be `null`.
+  """
+  previousPageIndex: Int
+
+  """Indicates whether this is the last page."""
+  isLastPage: Boolean!
+
+  """Indicates whether this is the first page."""
+  isFirstPage: Boolean!
+
+  """Resulting paginated items."""
+  entries: [Subscription!]!
+}
+
+input PaginatedSubscriptionsInput {
+  """First page has pageIndex value `0`."""
+  pageIndex: Int = 0
+
+  """The maximum number of results per page is `50`."""
+  pageSize: Int! = 50
+  filter: SubscriptionsInput
+}
+
+input SubscriptionsInput {
+  """Array of subscription names for filtering."""
+  name_in: [String!]
+
+  """Array of supported currencies for filtering."""
+  currency_in: [Currency!]
+
+  """Array of subscription types for filtering."""
+  type_in: [SubscriptionType!]
+}
+
+type SupportRequest {
+  """The integer ID of the support request."""
+  id: Int!
+
+  """The subject of the support request."""
+  subject: String!
+
+  """The status of the support request."""
+  status: SupportRequestStatus!
+
+  """The date the support request was created."""
+  createdAt: DateTime!
+
+  """The date the support request was last updated."""
+  updatedAt: DateTime!
+
+  """Number of replies in the request."""
+  numberOfReplies: Int!
+
+  """The date of the last reply in the request."""
+  lastReplyAt: DateTime!
+
+  """The name of the support ticket author."""
+  fullName: String!
+
+  """The email of the support request author."""
+  email: String!
+
+  """Category of the support request."""
+  category: SupportRequestCategory
+
+  """The messages contained in the support request."""
+  posts: [Post!]
+}
+
+"""Status of the support request."""
+enum SupportRequestStatus {
+  """The support request is open."""
+  OPEN
+
+  """The support request is closed and no longer being resolved."""
+  CLOSED
+}
+
+"""Category of the support request."""
+enum SupportRequestCategory {
+  """
+  The support request is a new request which has not been assigned category yet.
+  """
+  NEW
+
+  """The support request is a sales inquiry."""
+  SALES_INQUIRY
+
+  """The support request is a network issue."""
+  NETWORK_ISSUE
+
+  """The support request is a technical issue."""
+  TECHNICAL_ISSUE
+
+  """The support request is an abuse report."""
+  ABUSE_REPORT
+}
+
+type Post {
+  """The integer ID of the post."""
+  id: Int!
+
+  """The text contents of the post."""
+  contents: String!
+
+  """The date the post was created."""
+  createdAt: DateTime!
+
+  """The email of the post author."""
+  email: String!
+
+  """The name of the post author."""
+  fullName: String!
+
+  """The author group of the post author, staff or user."""
+  postBy: SupportRequestPostBy!
+}
+
+"""Author group of the post author, staff or user."""
+enum SupportRequestPostBy {
+  """The post was created by a user."""
+  USER
+
+  """The post was created by a DataPacket staff member."""
+  STAFF
+}
+
+input SupportRequestInput {
+  """The integer ID of the support request."""
+  id: Int!
+}
+
+input PaginatedSupportRequestsInput {
+  """First page has pageIndex value `0`."""
+  pageIndex: Int = 0
+
+  """The maximum number of results per page is `50`."""
+  pageSize: Int! = 50
+  filter: SupportRequestsInput
+}
+
+input SupportRequestsInput {
+  """Status of the support request."""
+  status: SupportRequestStatus
+
+  """Category of the support request."""
+  categories_in: [SupportRequestCategory!]
+}
+
+type Traffic {
+  """
+  Aggregated traffic statistics for selected servers in the given time period.
+  """
+  aggregated: AggregatedTraffic!
+}
+
+type AggregatedTraffic {
+  """Traffic statistics for inbound traffic."""
+  statisticsIn: TrafficStatistics
+
+  """Traffic statistics for outbound traffic."""
+  statisticsOut: TrafficStatistics
+}
+
+type TrafficStatistics {
+  """Average traffic in bits per second."""
+  average: Float!
+
+  """Last recorded traffic value in bits per second."""
+  last: Float!
+
+  """95th percentile traffic value in bits per second."""
+  p95: Float!
+
+  """Sum of all traffic values in bits."""
+  sum: Float!
+
+  """Maximum traffic value (peak) in bits."""
+  maximum: Float!
+}
+
+input TrafficInput {
+  """The date from which the traffic should be displayed."""
+  from: DateTime!
+
+  """
+  The date to which the traffic should be displayed, must be date after the `to` value.
+  """
+  to: DateTime!
+  filter: TrafficServersInput
+}
+
+input TrafficServersInput {
+  name_in: [String!]
+  alias_in: [String!]
+  location_in: [String!]
+  region_in: [String!]
+  ip_in: [String!]
+  ipmiIp_in: [String!]
+}
+
+"""
+List of all possible error codes that can be returned by the API. Error codes are accompanied by an error message. See <a href="#error-handling">Error handling</a> section for more information.
+"""
+enum ErrorCode {
+  """
+  An error occurred before the GraphQL server could attempt to parse given operation. For example, if the client sends a query with wrong `Content-type`, the server would return a `BAD_REQUEST` error.
+  """
+  BAD_REQUEST
+
+  """
+  Unable to process a request because it failed to validate the data provided in the request against the server's schema. This error typically occurs when the client sends a query or mutation that contains data that is not in the correct format or is missing required fields. For example, if the server's schema specifies that a certain field must be an integer, but the client sends a string value for that field, the server would return a `GRAPHQL_VALIDATION_FAILED` error.
+  """
+  GRAPHQL_VALIDATION_FAILED
+
+  """
+  Indicates that the server was unable to process a request because the client is not authorized to perform the requested action. This is typically returned when the client has not provided an authentication token or the token is invalid.
+  """
+  NOT_AUTHORIZED
+
+  """
+  The request is formally valid, but the server can't process it due to internal constraints. For example a password change that doesn't meet the minimum length requirement.
+  """
+  VALIDATION_FAILED
+
+  """
+  The server was unable to find the requested resource. For example, if you request a server `DP-999999`, but there is no such server associated with your account, the server would return a `NOT_FOUND` error.
+  """
+  NOT_FOUND
+
+  """
+  The server encountered an unexpected condition that prevented it from fulfilling the request. This is a general error code that can be caused by a wide range of issues, such as an unhandled exception or a server-side bug. We are monitoring all issues.
+  """
+  INTERNAL_SERVER_ERROR
+}
+
+type Mutation {
+  """
+  Set a reverse DNS (PTR) record for a given IP. Set hostname to `null` to delete the record.
+  """
+  setReverseDnsRecord(input: SetReverseDnsRecordInput!): SetReverseDnsRecordResponse!
+
+  """This mutation allows you to change IPMI password of a server."""
+  changeServerIpmiPassword(input: ChangeIpmiPasswordInput!): ChangeServerIpmiPasswordResponse!
+
+  """
+  Perform an IPMI server power action such as power on, power off or reboot. Please note that because IPMI may take a while to respond, this API call is asynchronous. As a result, we cannot guarantee that the requested action will be performed successfully.
+  """
+  performServerPowerAction(input: PerformServerPowerActionInput!): PerformServerPowerActionResponse!
+
+  """Set custom alias for your server."""
+  setServerAlias(input: SetServerAliasInput!): SetServerAliasResponse!
+
+  """Sets a boot device for server via IPMI."""
+  setServerBootDevice(input: SetServerBootDeviceInput!): SetServerBootDeviceResponse!
+
+  """Set primary IP to your server."""
+  setServerPrimaryIp(input: SetServerPrimaryIpInput!): SetServerPrimaryIpResponse!
+
+  """
+  This mutation sets tags for the server. Tags not provided will be deleted.
+  """
+  setServerTags(input: SetServerTagsInput!): Boolean!
+
+  """
+  Update or set a single tag for the server. If the provided `value` argument is omitted or null, the tag will be deleted.
+  """
+  setServerTag(input: SetServerTagInput!): Boolean!
+
+  """Create a new support request."""
+  createSupportRequest(input: CreateSupportRequestInput!): Boolean!
+
+  """Create reply to an existing support request."""
+  supportRequestReply(input: SupportRequestReplyInput!): Boolean!
+}
+
+type SetReverseDnsRecordResponse {
+  """IP address of the reverse DNS (PTR) record"""
+  ip: IpAddress!
+}
+
+input SetReverseDnsRecordInput {
+  """
+  IP address for the reverse DNS (PTR) record. Currently only IPv4 addresses are supported.
+  """
+  ip: String!
+
+  """
+  Hostname for the PTR record or `null` to delete the current record. Must end with a dot.
+  """
+  hostname: String
+}
+
+type ChangeServerIpmiPasswordResponse {
+  server: Server!
+}
+
+"""
+It is not a security best practice to limit the maximum length of a password, but there are different limits set by individual manufacturers. Therefore, we have to set the maximum length to 16 characters.
+"""
+input ChangeIpmiPasswordInput {
+  server: ServerInput!
+
+  """Minimum 10, maximum 16 characters long, at least one number."""
+  password: String!
+}
+
+type PerformServerPowerActionResponse {
+  server: Server!
+}
+
+input PerformServerPowerActionInput {
+  action: PowerAction!
+  server: ServerInput!
+}
+
+"""
+IPMI power actions that can be performed on a server. For detailed information, see the IPMI specification.
+"""
+enum PowerAction {
+  """Power on the server."""
+  ON
+
+  """
+  Power off the server. WARNING: This command does not initiate a clean shutdown of the operating system prior to powering down the system
+  """
+  OFF
+
+  """This command will perform a hard reset."""
+  RESET
+
+  """Initiate a soft-shutdown of OS via ACPI."""
+  SOFT
+
+  """
+  Power cycle involves cutting power to the system for at least one second and then restoring it.
+  """
+  CYCLE
+}
+
+type SetServerAliasResponse {
+  server: Server!
+}
+
+input SetServerAliasInput {
+  """
+  Choose unique value so you can use the alias in `ServerInput`. Set to `null` to remove alias.
+  """
+  alias: String
+  server: ServerInput!
+}
+
+type SetServerBootDeviceResponse {
+  server: Server!
+}
+
+input SetServerBootDeviceInput {
+  bootDevice: BootDevice!
+  server: ServerInput!
+}
+
+"""Type of the server boot device."""
+enum BootDevice {
+  """Set boot from BIOS default boot device."""
+  DISK
+
+  """Set boot from PXE."""
+  PXE
+
+  """Set boot from BIOS default boot device, request Safe Mode."""
+  SAFE_MODE
+
+  """Set boot from diagnostic partition."""
+  DIAGNOSTIC
+
+  """Set boot into BIOS setup."""
+  BIOS
+}
+
+type SetServerPrimaryIpResponse {
+  server: Server!
+}
+
+input SetServerPrimaryIpInput {
+  ip: String!
+  server: ServerInput!
+}
+
+input SetServerTagsInput {
+  """The server to set the tags for."""
+  server: ServerInput!
+
+  """
+  The tags to set. A server is allowed to have maximum of 10 tags. Note that both key and value are trimmed of whitespace at the start and end.
+  """
+  tags: [ServerTagInput!]!
+}
+
+input SetServerTagInput {
+  """The server to set the tag for."""
+  server: ServerInput!
+
+  """
+  The key of the tag. Can only contain alphanumeric characters, hyphens, underscores and periods. The maximum length is 100 characters.
+  """
+  key: String!
+
+  """The value of the tag. Maximum length of 150 characters."""
+  value: String
+}
+
+input CreateSupportRequestInput {
+  message: String!
+
+  """Subject of the support request."""
+  subject: SupportRequestSubject!
+
+  """Priority requested for of the support request."""
+  priority: SupportRequestPriority!
+
+  """Unique server identifier. Format: `DP-12345`."""
+  servers: [String!]
+
+  """
+  Network issues only - Location of the source for the faulty network requests.
+  """
+  sources: [String!]
+
+  """
+  Network issues only - Location of the destination for the faulty network requests.
+  """
+  destinations: [String!]
+}
+
+"""Subject of the support request."""
+enum SupportRequestSubject {
+  """The support request is a hardware issue such as faulty hardware."""
+  HARDWARE_ISSUE
+
+  """The support request is a hardware issue different from HARDWARE_ISSUE."""
+  HARDWARE_OTHER
+
+  """The support request is a network routing issue."""
+  NETWORK_ROUTING
+
+  """The support request is a network BGP issue."""
+  NETWORK_BGP
+
+  """The support request is a network additional IPs issue."""
+  NETWORK_ADDITIONAL_IPS
+
+  """
+  The support request is a network issue different from NETWORK_ROUTING, NETWORK_BGP, NETWORK_ADDITIONAL_IPS.
+  """
+  NETWORK_OTHER
+
+  """The support request is a sales server order issue."""
+  SALES_SERVER_ORDER
+
+  """The support request is an inquiry about pricing."""
+  SALES_PRICING
+
+  """
+  The support request is a sales bandwidth plan issue, such as upgrade or downgrade of server bandwidth plan.
+  """
+  SALES_BANDWIDTH_PLAN
+
+  """
+  The support request is a sales issue different from SALES_SERVER_ORDER, SALES_PRICING, SALES_BANDWIDTH_PLAN.
+  """
+  SALES_OTHER
+
+  """The support request is a cancellation issue."""
+  SALES_CANCELLATION
+
+  """
+  The support request is a sales server upgrade issue, such as RAM or Storage upgrade.
+  """
+  SALES_SERVER_UPGRADE
+}
+
+"""Priority requested for of the support request."""
+enum SupportRequestPriority {
+  """
+  The support request is to be answered by the following day (within 12-24 hours).
+  """
+  NORMAL
+
+  """The support request is to be answered within 2-6 hours."""
+  HIGH
+
+  """The support request is to be answered as soon as possible."""
+  URGENT
+}
+
+input SupportRequestReplyInput {
+  """The integer ID of the support request to add message to."""
+  id: Int!
+
+  """The text of the message to add to the post."""
+  message: String!
+}

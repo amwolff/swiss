@@ -1,4 +1,4 @@
-// usage: node-ids-to-query path/to/nodes.csv
+// usage: node-ids-to-hex path/to/nodes.csv
 //
 // nodes.csv is
 //
