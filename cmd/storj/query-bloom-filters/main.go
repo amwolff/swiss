@@ -1,15 +1,23 @@
-// usage: query-bloom-filters [-l=path/to/pieces/to/check] [-q] path/to/bloom/filters/…
+// usage: query-bloom-filters [-q] path/to/bloom/filters/… path/to/a/list.csv
+//
+// list.csv is
+//
+// nodeID1,pieceID1
+// nodeID1,pieceID2
+// nodeID2,pieceID3
+// …
 
 package main
 
 import (
 	"archive/zip"
+	"encoding/csv"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"storj.io/common/storj"
 	"storj.io/storj/satellite/gc/sender"
@@ -18,18 +26,14 @@ import (
 )
 
 func main() {
-	list := flag.String("l", "", "path to pieces to check")
 	quiet := flag.Bool("q", false, "quiet (only report if a piece is missing)")
 	flag.Parse()
 
-	if *list == "" && *quiet {
-		log.Fatalf("quiet can only be used with list")
-	}
-	if n := flag.NArg(); n != 1 {
-		log.Fatalf("not enough/too many args (has %d, needs 1)", n)
+	if n := flag.NArg(); n != 2 {
+		log.Fatalf("not enough/too many args (has %d, needs 2)", n)
 	}
 
-	pieceIDs, err := loadPieceIDs(*list)
+	nodesPieces, err := loadNodesPieces(flag.Arg(1))
 	if err != nil {
 		log.Panicf("loadPieceIDs: %v", err)
 	}
@@ -41,7 +45,8 @@ func main() {
 		log.Panicf("ReadDir: %v", err)
 	}
 
-	var retainInfos []*internalpb.RetainInfo
+	retainInfoLookup := make(map[storj.NodeID]*internalpb.RetainInfo)
+
 	for i, e := range entries {
 		if e.IsDir() {
 			continue
@@ -54,65 +59,48 @@ func main() {
 
 		path := bloomFiltersDir + fileInfo.Name()
 
-		infos, err := loadRetainInfos(path, fileInfo.Size())
+		retainInfos, err := loadRetainInfos(path, fileInfo.Size())
 		if err != nil {
 			log.Panicf("loadRetainInfos: %v", err)
 		}
 
-		retainInfos = append(retainInfos, infos...)
+		for _, info := range retainInfos {
+			if _, ok := retainInfoLookup[info.StorageNodeId]; ok {
+				log.Panicf("duplicate RetainInfo for %s", info.StorageNodeId)
+			}
+			retainInfoLookup[info.StorageNodeId] = info
+		}
 
-		log.Printf("%.0f%%: loaded %s", float32(i)/float32(len(entries)-1)*100, path)
+		log.Printf("%.0f%%: loaded %s", float32(i+1)/float32(len(entries))*100, path)
 	}
 
-	if len(pieceIDs) > 0 {
-		fmt.Printf("---\nchecking against the list first…\n")
-		for _, p := range pieceIDs {
-			checkFilters(retainInfos, p, *quiet)
+	for nid, pieces := range nodesPieces {
+		for _, pid := range pieces {
+			checkFilter(retainInfoLookup, nid, pid, *quiet)
 		}
-		fmt.Println("all checked")
-		if *quiet {
-			return
-		}
-		fmt.Printf("---\nswitching to interactive mode…\n")
-	}
-
-	for {
-		fmt.Printf("(q to exit) > ")
-
-		var s string
-		if _, err := fmt.Scanln(&s); err != nil {
-			fmt.Println("couldn't scan; q to exit")
-			continue
-		}
-
-		if s == "q" {
-			return
-		}
-
-		pid, err := storj.PieceIDFromString(s)
-		if err != nil {
-			fmt.Printf("couldn't decode %q: %v\n", s, err)
-			continue
-		}
-
-		checkFilters(retainInfos, pid, false)
 	}
 }
 
-func checkFilters(infos []*internalpb.RetainInfo, pid storj.PieceID, quiet bool) {
-	for _, info := range infos {
-		f, err := bloomfilter.NewFromBytes(info.Filter)
-		if err != nil {
-			log.Panicf("NewFromBytes: %v", err)
-		}
-		if f.Contains(pid) {
-			if !quiet {
-				fmt.Printf("BF (fill=%.2f, size=%d) for %s (piece count=%d) contains this piece\n", f.FillRate(), f.Size(), info.StorageNodeId, info.PieceCount)
-			}
-			return
-		}
+func checkFilter(lookup map[storj.NodeID]*internalpb.RetainInfo, nid storj.NodeID, pid storj.PieceID, quiet bool) {
+	info, ok := lookup[nid]
+	if !ok {
+		log.Printf("bloom filter for %s not found", nid)
+		return
 	}
-	fmt.Printf("%s not found\n", pid)
+
+	f, err := bloomfilter.NewFromBytes(info.Filter)
+	if err != nil {
+		log.Printf("bloom filter for %s cannot be loaded: %v", nid, err)
+		return
+	}
+
+	if f.Contains(pid) {
+		if !quiet {
+			log.Printf("bloom filter (fill=%.2f, size=%d) for %s (piece count=%d) contains checked piece", f.FillRate(), f.Size(), nid, info.PieceCount)
+		}
+		return
+	}
+	log.Printf("bloom filter for %s doesn't have %s", nid, pid)
 }
 
 func loadRetainInfos(path string, size int64) ([]*internalpb.RetainInfo, error) {
@@ -138,32 +126,34 @@ func loadRetainInfos(path string, size int64) ([]*internalpb.RetainInfo, error) 
 	return infos, nil
 }
 
-func loadPieceIDs(path string) ([]storj.PieceID, error) {
-	if path == "" {
-		return nil, nil
-	}
-
+func loadNodesPieces(path string) (map[storj.NodeID][]storj.PieceID, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	b, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
+	r := csv.NewReader(f)
+
+	ret := make(map[storj.NodeID][]storj.PieceID)
+	for i := 0; ; i++ {
+		records, err := r.Read()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+		nid, err := storj.NodeIDFromString(records[0])
+		if err != nil {
+			return nil, fmt.Errorf("couldn't decode %q: %w", nid, err)
+		}
+		pid, err := storj.PieceIDFromString(records[1])
+		if err != nil {
+			return nil, fmt.Errorf("couldn't decode %q: %w", pid, err)
+		}
+		ret[nid] = append(ret[nid], pid)
 	}
 
-	var ids []storj.PieceID
-	for _, s := range strings.Split(string(b), "\n") {
-		if s == "" {
-			continue
-		}
-		id, err := storj.PieceIDFromString(s)
-		if err != nil {
-			return nil, fmt.Errorf("couldn't decode %q: %w", id, err)
-		}
-		ids = append(ids, id)
-	}
-	return ids, nil
+	return ret, nil
 }
