@@ -69,6 +69,7 @@ func main() {
 		for _, p := range pieceIDs {
 			checkFilters(retainInfos, p, *quiet)
 		}
+		fmt.Println("all checked")
 		if *quiet {
 			return
 		}
