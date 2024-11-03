@@ -68,7 +68,9 @@ func main() {
 			if _, ok := retainInfoLookup[info.StorageNodeId]; ok {
 				log.Panicf("duplicate RetainInfo for %s", info.StorageNodeId)
 			}
-			retainInfoLookup[info.StorageNodeId] = info
+			if _, ok := nodesPieces[info.StorageNodeId]; ok {
+				retainInfoLookup[info.StorageNodeId] = info
+			}
 		}
 
 		log.Printf("%.0f%%: loaded %s", float32(i+1)/float32(len(entries))*100, path)
