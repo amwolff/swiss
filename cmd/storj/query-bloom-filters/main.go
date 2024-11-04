@@ -148,10 +148,16 @@ func loadNodesPieces(path string) (map[storj.NodeID][]storj.PieceID, error) {
 		}
 		nid, err := storj.NodeIDFromString(records[0])
 		if err != nil {
+			if i == 0 { // likely headers
+				continue
+			}
 			return nil, fmt.Errorf("couldn't decode %q: %w", nid, err)
 		}
 		pid, err := storj.PieceIDFromString(records[1])
 		if err != nil {
+			if i == 0 { // likely headers
+				continue
+			}
 			return nil, fmt.Errorf("couldn't decode %q: %w", pid, err)
 		}
 		ret[nid] = append(ret[nid], pid)
