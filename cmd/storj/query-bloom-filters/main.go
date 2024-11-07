@@ -46,6 +46,11 @@ func main() {
 	}
 
 	retainInfoLookup := make(map[storj.NodeID]*internalpb.RetainInfo)
+	remainingNodes := make(map[storj.NodeID]struct{})
+
+	for k := range nodesPieces {
+		remainingNodes[k] = struct{}{}
+	}
 
 	for i, e := range entries {
 		if e.IsDir() {
@@ -59,18 +64,8 @@ func main() {
 
 		path := bloomFiltersDir + fileInfo.Name()
 
-		retainInfos, err := loadRetainInfos(path, fileInfo.Size())
-		if err != nil {
+		if err = loadRetainInfos(path, fileInfo.Size(), retainInfoLookup, remainingNodes); err != nil {
 			log.Panicf("loadRetainInfos: %v", err)
-		}
-
-		for _, info := range retainInfos {
-			if _, ok := retainInfoLookup[info.StorageNodeId]; ok {
-				log.Panicf("duplicate RetainInfo for %s", info.StorageNodeId)
-			}
-			if _, ok := nodesPieces[info.StorageNodeId]; ok {
-				retainInfoLookup[info.StorageNodeId] = info
-			}
 		}
 
 		log.Printf("%.0f%%: loaded %s", float32(i+1)/float32(len(entries))*100, path)
@@ -98,34 +93,49 @@ func checkFilter(lookup map[storj.NodeID]*internalpb.RetainInfo, nid storj.NodeI
 
 	if f.Contains(pid) {
 		if !quiet {
-			log.Printf("bloom filter (fill=%.2f, size=%d) for %s (piece count=%d) contains checked piece", f.FillRate(), f.Size(), nid, info.PieceCount)
+			log.Printf("bloom filter (creation=%s, fill=%.2f, size=%d) for %s (piece count=%d) contains checked piece", info.CreationDate, f.FillRate(), f.Size(), nid, info.PieceCount)
 		}
 		return
 	}
-	log.Printf("bloom filter for %s doesn't have %s", nid, pid)
+	log.Printf("bloom filter (creation=%s) for %s doesn't have %s", info.CreationDate, nid, pid)
 }
 
-func loadRetainInfos(path string, size int64) ([]*internalpb.RetainInfo, error) {
+func loadRetainInfos(path string, size int64, lookup map[storj.NodeID]*internalpb.RetainInfo, remainingNodes map[storj.NodeID]struct{}) error {
+	if len(remainingNodes) == 0 {
+		return nil
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer f.Close()
 
 	r, err := zip.NewReader(f, size)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var infos []*internalpb.RetainInfo
 	for _, rf := range r.File {
+		if len(remainingNodes) == 0 {
+			break
+		}
+
 		i, err := sender.UnpackZipEntry(rf)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't unpack %q: %w", rf.Name, err)
+			return fmt.Errorf("couldn't unpack %q: %w", rf.Name, err)
 		}
-		infos = append(infos, i)
+
+		if _, ok := lookup[i.StorageNodeId]; ok {
+			return fmt.Errorf("duplicate RetainInfo for %s", i.StorageNodeId)
+		}
+		if _, ok := remainingNodes[i.StorageNodeId]; ok {
+			lookup[i.StorageNodeId] = i
+			delete(lookup, i.StorageNodeId)
+		}
 	}
-	return infos, nil
+
+	return nil
 }
 
 func loadNodesPieces(path string) (map[storj.NodeID][]storj.PieceID, error) {
