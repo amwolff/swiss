@@ -131,7 +131,7 @@ func loadRetainInfos(path string, size int64, lookup map[storj.NodeID]*internalp
 		}
 		if _, ok := remainingNodes[i.StorageNodeId]; ok {
 			lookup[i.StorageNodeId] = i
-			delete(lookup, i.StorageNodeId)
+			delete(remainingNodes, i.StorageNodeId)
 		}
 	}
 
