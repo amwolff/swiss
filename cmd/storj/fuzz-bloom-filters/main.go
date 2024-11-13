@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	count := flag.Int("c", 13535192, "piece count")
+	count := flag.Int("c", 13535192, "max piece count")
 	duration := flag.Duration("d", 24*time.Hour, "duration")
 	parallelism := flag.Int("p", 8, "parallelism")
 	flag.Parse()
@@ -23,11 +23,17 @@ func main() {
 	t := time.Now()
 	f := func(id int) {
 		for i := 0; time.Now().Before(t.Add(*duration)); i++ {
-			hashCount, tableSize := bloomfilter.OptimalParameters(int64(*count), 0.1, 35000000)
+			randCount := testrand.Intn(*count)
+
+			if h := *count / 2; randCount < h {
+				randCount = h
+			}
+
+			hashCount, tableSize := bloomfilter.OptimalParameters(int64(randCount), 0.1, 35000000)
 			filter := bloomfilter.NewExplicit(bloomfilter.GenerateSeed(), hashCount, tableSize)
 
 			var mem []storj.PieceID
-			for j := 0; j < *count; j++ {
+			for j := 0; j < randCount; j++ {
 				p := testrand.PieceID()
 				filter.Add(p)
 				mem = append(mem, p)
