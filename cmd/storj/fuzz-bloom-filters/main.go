@@ -46,7 +46,7 @@ func main() {
 				}
 			}
 
-			log.Printf("%d: Iteration %d (size=%d, fill=%.2f)", id, i, filter.Size(), filter.FillRate())
+			log.Printf("%d: Iteration %d ((fill=%.2f, size=%d), (pieces=%d))", id, i, filter.FillRate(), filter.Size(), len(mem))
 		}
 	}
 
