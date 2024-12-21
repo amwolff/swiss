@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.48.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.51.3
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	golang.org/x/sync v0.8.0
 	storj.io/common v0.0.0-20241014122736-47dfa836934a
 	storj.io/edge v1.74.0
