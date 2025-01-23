@@ -71,10 +71,10 @@ func main() {
 	done := make(chan struct{})
 
 	var servers errgroup.Group
-	for _, path := range sockets {
-		path := path
+	for _, socket := range sockets {
+		socket := socket
 		servers.Go(func() error {
-			startServer(path, ready, done)
+			startServer(socket, ready, done)
 			return nil
 		})
 	}
@@ -82,10 +82,10 @@ func main() {
 	ready.Wait()
 
 	var clients errgroup.Group
-	for _, path := range sockets {
-		path := path
+	for _, socket := range sockets {
+		socket := socket
 		clients.Go(func() error {
-			startClient(path, iterations, randBuf.Bytes())
+			startClient(socket, iterations, randBuf.Bytes())
 			return nil
 		})
 	}
@@ -100,24 +100,27 @@ func startServer(socket string, ready *sync.WaitGroup, done <-chan struct{}) {
 	if err != nil {
 		log.Panicf("server (%s): failed to listen on socket: %v", socket, err)
 	}
-	defer listener.Close()
-
-	log.Printf("server (%s): listening for connections…", socket)
 
 	var g errgroup.Group
+
 	g.Go(func() error {
 		<-done
 		return listener.Close()
 	})
 
+	log.Printf("server (%s): listening for connections…", socket)
 	ready.Done()
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("server (%s): failed to accept connection: %v", socket, err)
 			break
 		}
-		go handleConnection(socket, conn)
+		g.Go(func() error {
+			handleConnection(socket, conn)
+			return nil
+		})
 	}
 
 	log.Printf("server (%s): closed: %v", socket, g.Wait())
@@ -143,10 +146,9 @@ func startClient(socket string, iterations int, buf []byte) {
 func sendData(socket string, i int, buf []byte) {
 	conn, err := net.Dial("unix", socket)
 	if err != nil {
-		log.Panicf("client (%s/%d): failed to connect to server: %v", socket, i, err)
+		log.Printf("client (%s/%d): failed to connect to server: %v", socket, i, err)
 	}
 	defer conn.Close()
-
 	log.Printf("client (%s/%d): connected to server", socket, i)
 
 	if _, err = io.Copy(conn, bytes.NewBuffer(buf)); err != nil {
