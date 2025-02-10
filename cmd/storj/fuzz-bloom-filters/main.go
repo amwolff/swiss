@@ -18,6 +18,7 @@ func main() {
 	count := flag.Int("c", 13535192, "max piece count")
 	duration := flag.Duration("d", 24*time.Hour, "duration")
 	parallelism := flag.Int("p", 8, "parallelism")
+	reportEvery := flag.Int("i", 1, "print a report every ith iteration")
 	flag.Parse()
 
 	t := time.Now()
@@ -46,7 +47,9 @@ func main() {
 				}
 			}
 
-			log.Printf("%d: Iteration %d ((fill=%.2f, size=%d), (pieces=%d))", id, i, filter.FillRate(), filter.Size(), len(mem))
+			if i > 0 && i%*reportEvery == 0 {
+				log.Printf("%d: Iteration %d ((fill=%.2f, size=%d), (pieces=%d))", id, i, filter.FillRate(), filter.Size(), len(mem))
+			}
 		}
 	}
 
