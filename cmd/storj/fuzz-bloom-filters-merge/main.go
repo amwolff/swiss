@@ -21,37 +21,17 @@ func main() {
 	parallelism := flag.Int("p", 8, "parallelism")
 	flag.Parse()
 
-	t := time.Now()
-	f := func() ([]storj.PieceID, *bloomfilter.Filter) {
-		randCount := testrand.Intn(*count)
-
-		if h := *count / 2; randCount < h {
-			randCount = h
-		}
-
-		hashCount, tableSize := bloomfilter.OptimalParameters(int64(randCount), 0.1, 35000000)
-		filter := bloomfilter.NewExplicit(bloomfilter.GenerateSeed(), hashCount, tableSize)
-
-		var mem []storj.PieceID
-		for j := 0; j < randCount; j++ {
-			p := testrand.PieceID()
-			filter.Add(p)
-			mem = append(mem, p)
-		}
-
-		return mem, filter
-	}
-
 	var g errgroup.Group
 
 	for i := 0; i < *parallelism; i++ {
 		i := i
+		t := time.Now()
 		g.Go(func() error {
-			for j := 0; t.Before(t.Add(*duration)); j++ {
+			for j := 0; time.Now().Before(t.Add(*duration)); j++ {
 				id := strconv.Itoa(i) + "-" + strconv.Itoa(j)
 
-				mem1, bf1 := f()
-				mem2, bf2 := f()
+				mem1, bf1 := generate(*count)
+				mem2, bf2 := generate(*count)
 
 				if err := bf1.AddFilter(bf2); err != nil {
 					panic(err)
@@ -78,4 +58,24 @@ func checkContains(id string, mem []storj.PieceID, filter *bloomfilter.Filter) {
 			log.Printf("%s: %d: (seed=%v, count=%v, size=%d, fill=%.2f) does not contain %s", id, j, seed, hc, size, filter.FillRate(), p)
 		}
 	}
+}
+
+func generate(count int) ([]storj.PieceID, *bloomfilter.Filter) {
+	randCount := testrand.Intn(count)
+
+	if h := count / 2; randCount < h {
+		randCount = h
+	}
+
+	hashCount, tableSize := bloomfilter.OptimalParameters(int64(randCount), 0.1, 35000000)
+	filter := bloomfilter.NewExplicit(bloomfilter.GenerateSeed(), hashCount, tableSize)
+
+	var mem []storj.PieceID
+	for j := 0; j < randCount; j++ {
+		p := testrand.PieceID()
+		filter.Add(p)
+		mem = append(mem, p)
+	}
+
+	return mem, filter
 }
