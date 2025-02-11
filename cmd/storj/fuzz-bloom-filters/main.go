@@ -1,4 +1,4 @@
-// usage: fuzz-bloom-filters [-c=(piece)count] [-d=duration] [-p=parallelism]
+// usage: fuzz-bloom-filters [-c=(piece)count] [-d=duration] [-p=parallelism] [-i=reportEvery]
 
 package main
 
