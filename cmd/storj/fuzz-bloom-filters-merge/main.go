@@ -30,8 +30,10 @@ func main() {
 			for j := 0; time.Now().Before(t.Add(*duration)); j++ {
 				id := strconv.Itoa(i) + "-" + strconv.Itoa(j)
 
-				mem1, bf1 := generate(*count)
-				mem2, bf2 := generate(*count)
+				seed := bloomfilter.GenerateSeed()
+
+				mem1, bf1 := generate(seed, *count)
+				mem2, bf2 := generate(seed, *count)
 
 				if err := bf1.AddFilter(bf2); err != nil {
 					panic(err)
@@ -60,7 +62,7 @@ func checkContains(id string, mem []storj.PieceID, filter *bloomfilter.Filter) {
 	}
 }
 
-func generate(count int) ([]storj.PieceID, *bloomfilter.Filter) {
+func generate(seed byte, count int) ([]storj.PieceID, *bloomfilter.Filter) {
 	randCount := testrand.Intn(count)
 
 	if h := count / 2; randCount < h {
@@ -68,7 +70,7 @@ func generate(count int) ([]storj.PieceID, *bloomfilter.Filter) {
 	}
 
 	hashCount, tableSize := bloomfilter.OptimalParameters(int64(randCount), 0.1, 35000000)
-	filter := bloomfilter.NewExplicit(bloomfilter.GenerateSeed(), hashCount, tableSize)
+	filter := bloomfilter.NewExplicit(seed, hashCount, tableSize)
 
 	var mem []storj.PieceID
 	for j := 0; j < randCount; j++ {
